@@ -8,7 +8,7 @@ class UlsServiceProvider extends BaseServiceProvider
 {
     public function boot() {
         $this->publishes([
-            __DIR__.'../config/uls.php' => config_path('uls.php'),
+            __DIR__.'/../config/uls.php' => config_path('uls.php'),
         ]);
     }
 
