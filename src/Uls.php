@@ -29,6 +29,7 @@ class Uls
     public function __construct() {
         $this->version = config("uls.version", 2);
         if ($this->version < $this->_minversion) {
+            throw new \Exception("Only ULS versions $this->_minversion and higher are supported. Assuming min version.");
             $this->version = $this->_minversion;
             \Log::info("VATUSA\Uls: Version was set below minimum version. Assuming version of $this->_minversion instead of " . config("uls.version", 2));
         }
@@ -63,8 +64,8 @@ class Uls
         }
     }
 
-    public function redirectUrl($dev = false) {
-        return $this->buildUrl('login', ($dev) ? "dev" : null);
+    public function redirectUrl($index = 1) {
+        return $this->buildUrl('login', "url=$index");
     }
 
     public function verifyToken($token) {
@@ -93,8 +94,8 @@ class Uls
 
         $claimCheckerManager = ClaimCheckerManager::create(
             [
-                new Checker\IssuedAtChecker(),
-                new Checker\NotBeforeChecker(),
+                new Checker\IssuedAtChecker(5),
+                new Checker\NotBeforeChecker(5),
                 new Checker\ExpirationTimeChecker(),
                 new Checker\AudienceChecker($this->facility)
             ]
@@ -118,25 +119,25 @@ class Uls
         return json_decode($this->curlInfo("GET", $this->buildUrl("info", "token=" . $this->token)), true);
      }
 
-     private function curlInfo($method, $url, $postString = "") {
-         $ch = curl_init();
+    private function curlInfo($method, $url, $postString = "") {
+        $ch = curl_init();
 
-         curl_setopt_array($ch, [
-             CURLOPT_URL            => $url,
-             CURLOPT_RETURNTRANSFER => 1,
-             CURLOPT_TIMEOUT        => 15
-         ]);
-         if ($method == "POST") {
+        curl_setopt_array($ch, [
+            CURLOPT_URL            => $url,
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_TIMEOUT        => 15
+        ]);
+        if ($method == "POST") {
             curl_setopt_array($ch, [
-                CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => $postString
+                CURLOPT_POST           => ($method=="POST") ? true : false,
+                CURLOPT_POSTFIELDS     => ($method=="POST") ? $postString : null
             ]);
-         }
-         $response = curl_exec($ch);
-         if (!$response) {
-             \Log::critical("Laravel-ULS/Curl: error occurred: " . curl_error($ch) . ", error number: #" . curl_errno($ch));
-             return false;
-         }
-         return $response;
-     }
+        }
+        $response = curl_exec($ch);
+        if (!$response) {
+            \Log::critical("Laravel-ULS/Curl: error occurred: " . curl_error($ch) . ", error number: #" . curl_errno($ch));
+            return false;
+        }
+        return $response;
+    }
 }
